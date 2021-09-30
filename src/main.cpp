@@ -2,9 +2,27 @@
 #include <LiquidCrystal.h>
 #include <Wire.h>
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
-const int vOutPin = A5;
+const int tPin = A0;
+const int sPin = A5;
 const double vRef = 5.0;
 const int r1 = 10000;
+const int R = 3;
+const int G = 5;
+const int B = 6;
+const int fade = 10;
+
+bool ROn = false;
+bool GOn = false;
+bool BOn = false;
+
+int Gval = 255;
+int Rval = 255;
+int Bval = 255;
+int time = 0;
+int fadeTime = 0;
+long salV = 0;
+long tempV = 0;
+double temp;
 
 double calculateVoltage(int vDigital)
 {
@@ -19,7 +37,11 @@ double calculateResistance(int vDigital)
 
 void setup()
 {
-  pinMode(vOutPin, INPUT);
+  pinMode(sPin, INPUT);
+  pinMode(tPin, INPUT);
+  pinMode(R, OUTPUT);
+  pinMode(G, OUTPUT);
+  pinMode(B, OUTPUT);
   lcd.begin(16, 2);
   lcd.setCursor(0, 0);
   Serial.begin(9600);
@@ -27,14 +49,99 @@ void setup()
 
 void loop()
 {
+  time = millis();
+  fadeTime = time + 1000;
   lcd.setCursor(0, 0);
-  int vOut = analogRead(vOutPin);
-  Serial.print(vOut);
+  salV = analogRead(sPin);
+
+  int count = 0;
+  while (time < fadeTime) //fade code
+  {
+    tempV = tempV + analogRead(tPin);
+    if (ROn)
+    { //LED fade code
+      if (Rval > 5)
+      {
+        Rval = Rval - fade;
+      }
+    }
+    else
+    {
+      if (Rval < 255)
+      {
+        Rval = Rval + fade;
+      }
+    }
+    if (GOn)
+    {
+      if (Gval > 5)
+      {
+        Gval = Gval - fade;
+      }
+    }
+    else
+    {
+      if (Gval < 255)
+      {
+        Gval = Gval + fade;
+      }
+    }
+    if (BOn)
+    {
+      if (Bval > 5)
+      {
+        Bval = Bval - fade;
+      }
+    }
+    else
+    {
+      if (Bval < 255)
+      {
+        Bval = Bval + fade;
+      }
+    }
+
+    analogWrite(G, Gval);
+    analogWrite(R, Rval);
+    analogWrite(B, Bval);
+    delay(10);
+    count = count + 1;
+    time = millis();
+  }
+
+  tempV = tempV / count; //average reads
+  temp = calculateVoltage(tempV);
+
+  Serial.print(salV);
   Serial.print(", ");
-  Serial.print(calculateVoltage(vOut));
+  Serial.print(calculateVoltage(salV));
   Serial.print(", ");
-  Serial.println(calculateResistance(vOut));
+  Serial.print(calculateResistance(salV));
+  Serial.print(", ");
+  Serial.println(temp);
+
   lcd.print("Voltage = ");
-  lcd.print(calculateVoltage(vOut));
-  delay(1000);
+  lcd.print(calculateVoltage(salV));
+  lcd.setCursor(0, 2);
+  lcd.print("TempV = ");
+  lcd.print(temp);
+
+  if (calculateVoltage(salV) > 3.33)
+  { //hot margin in C
+    ROn = true;
+    GOn = false;
+    BOn = false;
+  }
+  else if (calculateVoltage(salV) < 1.66)
+  { //cold margin in C
+    ROn = false;
+    GOn = false;
+    BOn = true;
+  }
+  else
+  {
+    ROn = false;
+    GOn = true;
+    BOn = false;
+  }
 }
