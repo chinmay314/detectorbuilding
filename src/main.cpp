@@ -2,6 +2,7 @@
 #include <LiquidCrystal.h>
 #include <Wire.h>
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+#pragma region constants
 const int tPin = A0;
 const int sPin = A5;
 const double vRef = 5.0;
@@ -10,11 +11,11 @@ const int R = 3;
 const int G = 5;
 const int B = 6;
 const int fade = 10;
-
+#pragma endregion
+#pragma region variables
 bool ROn = false;
 bool GOn = false;
 bool BOn = false;
-
 int Gval = 255;
 int Rval = 255;
 int Bval = 255;
@@ -23,6 +24,7 @@ int fadeTime = 0;
 long salV = 0;
 long tempV = 0;
 double temp;
+#pragma endregion
 
 double calculateVoltage(int vDigital)
 {
@@ -109,22 +111,23 @@ void loop()
     time = millis();
   }
 
+  double Vout = calculateVoltage(salV);
   tempV = tempV / count; //average reads
   temp = calculateVoltage(tempV);
+  Serial.print("Voltage = ");
+  Serial.print(Vout);
+  Serial.print(", ");
+  Serial.print("Salinity (ppm) = ");
+  float salinity = 1 / ((0.002006061 * Vout) - 0.002220208);
+  Serial.println(salinity);
 
-  Serial.print(salV);
-  Serial.print(", ");
-  Serial.print(calculateVoltage(salV));
-  Serial.print(", ");
-  Serial.print(calculateResistance(salV));
-  Serial.print(", ");
-  Serial.println(temp);
-
-  lcd.print("Voltage = ");
-  lcd.print(calculateVoltage(salV));
-  lcd.setCursor(0, 2);
-  lcd.print("TempV = ");
-  lcd.print(temp);
+  // lcd.print("Voltage = ");
+  // lcd.print(calculateVoltage(salV));
+  // lcd.setCursor(0, 2);
+  // lcd.print("TempV = ");
+  // lcd.print(temp);
+  lcd.print(salinity);
+  lcd.print(" ppm");
 
   if (calculateVoltage(salV) > 3.33)
   { //hot margin in C
